@@ -1,0 +1,12 @@
+# Environments
+rl-env/
+.venv/
+env/
+
+# PyTorch
+*.pth
+*.pt
+
+# Cache
+__pycache__/
+.ipynb_checkpoints/
