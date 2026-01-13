@@ -2,22 +2,123 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Lunar Lander Replay</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lunar Lander Replay 3D</title>
     <style>
-      body { margin: 0; overflow: hidden; }
-      #info {
+      body {
+        margin: 0;
+        overflow: hidden;
+        background-color: #000;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      }
+
+      /* =========================
+         UI CONTAINER (HUD)
+      ========================= */
+      #ui-container {
         position: absolute;
-        top: 10px;
-        left: 10px;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        
+        padding: 12px 25px;
+        border-radius: 30px;
+        
+        /* Efek Kaca (Glassmorphism) */
+        background: rgba(20, 20, 35, 0.6);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        
+        z-index: 100; /* Pastikan di atas canvas 3D */
+      }
+
+      /* =========================
+         BUTTON STYLE
+      ========================= */
+      #playPause {
+        background: #d62828; /* Merah Roket */
         color: white;
-        font-family: monospace;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        transition: all 0.2s ease;
+        min-width: 80px;
+      }
+
+      #playPause:hover {
+        background: #ff3333;
+        transform: scale(1.05);
+        box-shadow: 0 0 10px rgba(214, 40, 40, 0.6);
+      }
+
+      #playPause:active {
+        transform: scale(0.95);
+      }
+
+      /* =========================
+         SLIDER / SCRUBBER STYLE
+      ========================= */
+      #scrubber {
+        -webkit-appearance: none; /* Hapus style default browser */
+        width: 300px;
+        height: 6px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 5px;
+        outline: none;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      #scrubber:hover {
+        background: rgba(255, 255, 255, 0.3);
+      }
+
+      /* Bullet (Thumb) Slider untuk Chrome/Safari */
+      #scrubber::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #4cc9f0; /* Biru Neon (sesuai jendela roket) */
+        border: 2px solid #fff;
+        cursor: pointer;
+        box-shadow: 0 0 10px rgba(76, 201, 240, 0.8);
+        transition: transform 0.2s;
+      }
+
+      #scrubber::-webkit-slider-thumb:hover {
+        transform: scale(1.2);
+      }
+
+      /* Bullet (Thumb) Slider untuk Firefox */
+      #scrubber::-moz-range-thumb {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #4cc9f0;
+        border: 2px solid #fff;
+        cursor: pointer;
+        box-shadow: 0 0 10px rgba(76, 201, 240, 0.8);
       }
     </style>
   </head>
   <body>
-    <!-- <div id="info">Lunar Lander Replay</div> -->
-    <button id="playPause">Pause</button>
-    <input type="range" id="scrubber" min="0" value="0" style="width:300px;">
+    <div id="ui-container">
+      <button id="playPause">Pause</button>
+      <input type="range" id="scrubber" min="0" value="0">
+    </div>
+
     <script type="module" src="main.js"></script>
   </body>
 </html>
