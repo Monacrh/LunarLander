@@ -69,7 +69,7 @@ class DQN(nn.Module):
         return self.fc3(x)
 
 
-def evaluate(episodes=5, render=False):
+def evaluate(episodes=5, render=True):
     env = gym.make(
         "LunarLander-v3",
         render_mode="human" if render else None
@@ -79,7 +79,7 @@ def evaluate(episodes=5, render=False):
     action_dim = env.action_space.n
 
     model = DQN(state_dim, action_dim)
-    model.load_state_dict(torch.load("models/dqn_lander.pth"))
+    model.load_state_dict(torch.load("models/double_dqn_lunarlander.pth"))
     model.eval()
 
     scores = []
