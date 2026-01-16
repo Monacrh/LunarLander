@@ -1,290 +1,430 @@
-import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160/build/three.module.js"
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160/build/three.module.js";
+import { EffectComposer } from "https://cdn.jsdelivr.net/npm/three@0.160/examples/jsm/postprocessing/EffectComposer.js";
+import { RenderPass } from "https://cdn.jsdelivr.net/npm/three@0.160/examples/jsm/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "https://cdn.jsdelivr.net/npm/three@0.160/examples/jsm/postprocessing/UnrealBloomPass.js";
 
 // =====================
-// 1. BASIC SETUP (SCENE & CAMERA)
+// 1. BASIC SETUP (SCENE, CAMERA, RENDERER)
 // =====================
-const scene = new THREE.Scene()
-scene.background = new THREE.Color(0x020205) // Hitam pekat sedikit biru
-scene.fog = new THREE.FogExp2(0x020205, 0.02) // Kabut hitam untuk kedalaman
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x050508); // Sedikit lebih terang dari hitam pekat
+scene.fog = new THREE.FogExp2(0x050508, 0.02);
 
 const camera = new THREE.PerspectiveCamera(
   60,
   window.innerWidth / window.innerHeight,
   0.1,
   1000
-)
-camera.position.set(0, 4, 10)
+);
+camera.position.set(0, 4, 12);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true })
-renderer.setSize(window.innerWidth, window.innerHeight)
-renderer.shadowMap.enabled = true // Aktifkan bayangan
-renderer.shadowMap.type = THREE.PCFSoftShadowMap
-document.body.appendChild(renderer.domElement)
-
-// =====================
-// 2. LIGHTING (SPACE ATMOSPHERE)
-// =====================
-// Cahaya ambien yang sangat redup (angkasa itu gelap)
-scene.add(new THREE.AmbientLight(0x404040, 0.6))
-
-// Cahaya Matahari (Keras dan menciptakan bayangan tajam)
-const sunLight = new THREE.DirectionalLight(0xffffff, 1.5)
-sunLight.position.set(20, 50, 20)
-sunLight.castShadow = true
-sunLight.shadow.mapSize.width = 2048
-sunLight.shadow.mapSize.height = 2048
-sunLight.shadow.camera.near = 0.5
-sunLight.shadow.camera.far = 100
-sunLight.shadow.camera.left = -30
-sunLight.shadow.camera.right = 30
-sunLight.shadow.camera.top = 30
-sunLight.shadow.camera.bottom = -30
-scene.add(sunLight)
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ReinhardToneMapping; // Agar warna bloom tidak 'burn'
+document.body.appendChild(renderer.domElement);
 
 // =====================
-// 3. BACKGROUND (STARFIELD)
+// 2. POST-PROCESSING (BLOOM / GLOW EFFECT)
+// =====================
+const renderScene = new RenderPass(scene, camera);
+
+// Resolution, Strength, Radius, Threshold
+const bloomPass = new UnrealBloomPass(
+  new THREE.Vector2(window.innerWidth, window.innerHeight),
+  1.5,
+  0.4,
+  0.85
+);
+bloomPass.strength = 1.2; // Kekuatan cahaya
+bloomPass.radius = 0.5;   // Sebaran cahaya
+bloomPass.threshold = 0.2; // Batas kecerahan objek yang akan glowing
+
+const composer = new EffectComposer(renderer);
+composer.addPass(renderScene);
+composer.addPass(bloomPass);
+
+// =====================
+// 3. LIGHTING
+// =====================
+const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+scene.add(ambientLight);
+
+const sunLight = new THREE.DirectionalLight(0xffffff, 2);
+sunLight.position.set(20, 50, 20);
+sunLight.castShadow = true;
+sunLight.shadow.mapSize.width = 2048;
+sunLight.shadow.mapSize.height = 2048;
+scene.add(sunLight);
+
+// Cahaya biru dari bawah (pantulan atmosfer tipis/es)
+const moonLight = new THREE.DirectionalLight(0x8888ff, 0.5);
+moonLight.position.set(-5, -10, -5);
+scene.add(moonLight);
+
+// =====================
+// 4. BACKGROUND (STARFIELD & TRAJECTORY)
 // =====================
 function createStars() {
-  const starGeo = new THREE.BufferGeometry()
-  const starCount = 2000
-  const posArray = new Float32Array(starCount * 3)
+  const starGeo = new THREE.BufferGeometry();
+  const starCount = 3000;
+  const posArray = new Float32Array(starCount * 3);
+  const colorArray = new Float32Array(starCount * 3);
 
-  for(let i = 0; i < starCount * 3; i++) {
-    // Sebar bintang di area yang luas
-    posArray[i] = (Math.random() - 0.5) * 200 
+  for(let i = 0; i < starCount * 3; i+=3) {
+    posArray[i] = (Math.random() - 0.5) * 300;
+    posArray[i+1] = (Math.random() - 0.5) * 300;
+    posArray[i+2] = (Math.random() - 0.5) * 100 - 50; // Jauh di belakang
+
+    // Variasi warna bintang (putih, biru muda, kuning pucat)
+    const starType = Math.random();
+    let c = new THREE.Color();
+    if(starType > 0.9) c.setHex(0xaaaaff); // Biru
+    else if(starType > 0.7) c.setHex(0xffffee); // Kuning
+    else c.setHex(0xffffff); // Putih
+
+    colorArray[i] = c.r;
+    colorArray[i+1] = c.g;
+    colorArray[i+2] = c.b;
   }
   
-  starGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3))
+  starGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+  starGeo.setAttribute('color', new THREE.BufferAttribute(colorArray, 3));
+
   const starMat = new THREE.PointsMaterial({
-    size: 0.15,
-    color: 0xffffff,
+    size: 0.2,
+    vertexColors: true,
     transparent: true,
     opacity: 0.8
-  })
+  });
   
-  const stars = new THREE.Points(starGeo, starMat)
-  scene.add(stars)
+  const stars = new THREE.Points(starGeo, starMat);
+  scene.add(stars);
 }
-createStars()
+createStars();
+
+// Fungsi menggambar jalur lintasan (Trajectory)
+function createTrajectory(episodeData) {
+  const points = [];
+  episodeData.forEach(step => {
+    // Ambil posisi X, Y. Z=0.
+    // Kita naikkan sedikit Z-nya (-0.1) agar ada di belakang roket tapi di depan background
+    points.push(new THREE.Vector3(step.state.x, step.state.y, -0.1));
+  });
+
+  const geometry = new THREE.BufferGeometry().setFromPoints(points);
+  const material = new THREE.LineBasicMaterial({ 
+    color: 0x00ff44, // Hijau HUD
+    opacity: 0.3, 
+    transparent: true,
+    linewidth: 2
+  });
+  
+  const trajectoryLine = new THREE.Line(geometry, material);
+  scene.add(trajectoryLine);
+}
 
 // =====================
-// 4. TERRAIN (LOW POLY MOON SURFACE)
+// 5. TERRAIN
 // =====================
 function createMoonSurface() {
-  // Buat plane dengan segmen yang banyak agar bisa diubah bentuknya
-  const geo = new THREE.PlaneGeometry(80, 80, 60, 60)
-  
-  // Manipulasi Vertex untuk membuat Kawah & Bukit
-  const posAttribute = geo.attributes.position
-  const vertex = new THREE.Vector3()
+  const geo = new THREE.PlaneGeometry(100, 100, 80, 80);
+  const posAttribute = geo.attributes.position;
+  const vertex = new THREE.Vector3();
 
   for (let i = 0; i < posAttribute.count; i++) {
-    vertex.fromBufferAttribute(posAttribute, i)
-    
-    // Perhitungan acak (Noise sederhana)
-    // Gelombang besar + Gelombang kecil
-    let zHeight = Math.sin(vertex.x * 0.2) * Math.cos(vertex.y * 0.2) * 1.5 
-    zHeight += Math.random() * 0.4
+    vertex.fromBufferAttribute(posAttribute, i);
+    let zHeight = Math.sin(vertex.x * 0.15) * Math.cos(vertex.y * 0.15) * 2; 
+    zHeight += Math.random() * 0.5;
 
-    // PENTING: Ratakan area tengah (tempat landing) agar tidak aneh
-    const distFromCenter = Math.sqrt(vertex.x * vertex.x + vertex.y * vertex.y)
-    if (Math.abs(vertex.x) < 8 && Math.abs(vertex.y) < 5) {
-      zHeight *= 0.1 // Datar di tengah
+    // Landing pad area
+    if (Math.abs(vertex.x) < 5 && Math.abs(vertex.y) < 3) {
+      zHeight *= 0.05;
     }
-
-    // Set ketinggian baru (Z dalam PlaneGeometry adalah 'tinggi' sebelum dirotasi)
-    posAttribute.setZ(i, zHeight)
+    posAttribute.setZ(i, zHeight);
   }
 
-  geo.computeVertexNormals() // Hitung ulang pencahayaan
+  geo.computeVertexNormals();
 
   const mat = new THREE.MeshStandardMaterial({
-    color: 0x555555, // Abu-abu bulan
-    roughness: 0.9,
-    metalness: 0.1,
-    flatShading: true // Gaya Low Poly (kotak-kotak terlihat)
-  })
+    color: 0x333338,
+    roughness: 0.8,
+    metalness: 0.2,
+    flatShading: true
+  });
 
-  const mesh = new THREE.Mesh(geo, mat)
-  mesh.rotation.x = -Math.PI / 2
-  mesh.position.y = -0.6 // Turunkan sedikit agar roket pas di atasnya
-  mesh.receiveShadow = true
-  scene.add(mesh)
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.position.y = -0.6; 
+  mesh.receiveShadow = true;
+  scene.add(mesh);
+  
+  // Grid Helper di tanah untuk kesan simulasi
+  const grid = new THREE.GridHelper(100, 50, 0x444444, 0x111111);
+  grid.position.y = -1.45;
+  scene.add(grid);
 }
-createMoonSurface()
-
+createMoonSurface();
 
 // =====================
-// 5. LANDER (FUTURISTIC ROCKET)
+// 6. LANDER & PARTICLES
 // =====================
-const lander = new THREE.Group()
+const lander = new THREE.Group();
 
-// Materials
-const matBody = new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.3, metalness: 0.2 })
-const matRed = new THREE.MeshStandardMaterial({ color: 0xd62828, roughness: 0.4 })
-const matDark = new THREE.MeshStandardMaterial({ color: 0x1d3557, roughness: 0.7 })
-const matWindow = new THREE.MeshStandardMaterial({ color: 0x4cc9f0, emissive: 0x111111, roughness: 0.1 })
+// Materials dengan Emissive untuk efek Glow
+const matBody = new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.3, metalness: 0.5 });
+const matRed = new THREE.MeshStandardMaterial({ color: 0xd62828, roughness: 0.4 });
+const matDark = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 });
+const matWindow = new THREE.MeshStandardMaterial({ 
+  color: 0x00ffff, 
+  emissive: 0x00aaaa, // Jendela bersinar
+  emissiveIntensity: 0.8,
+  roughness: 0.2 
+});
 
 // A. Body
-const body = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.35, 1.2, 32), matBody)
-body.position.y = 0.2
-body.castShadow = true
-lander.add(body)
+const body = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 1.2, 16), matBody);
+body.position.y = 0.2;
+body.castShadow = true;
+lander.add(body);
 
-// B. Nose
-const nose = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.5, 32), matRed)
-nose.position.y = 1.05
-nose.castShadow = true
-lander.add(nose)
+// B. Nose Cone
+const nose = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.5, 16), matRed);
+nose.position.y = 1.05;
+nose.castShadow = true;
+lander.add(nose);
 
-// C. Engine
-const engine = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.2, 0.3, 32), matDark)
-engine.position.y = -0.45
-lander.add(engine)
+// C. Engine Nozzle
+const engine = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.15, 0.3, 16), matDark);
+engine.position.y = -0.45;
+lander.add(engine);
 
 // D. Cockpit
-const cockpit = new THREE.Mesh(new THREE.SphereGeometry(0.12, 32, 16), matWindow)
-cockpit.position.set(0, 0.5, 0.28)
-cockpit.scale.z = 0.6
-lander.add(cockpit)
+const cockpit = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 16), matWindow);
+cockpit.position.set(0, 0.5, 0.3);
+cockpit.scale.z = 0.5;
+lander.add(cockpit);
 
-// E. Fins
-const finGeo = new THREE.BoxGeometry(0.4, 0.5, 0.05)
+// E. Legs (Landing Gear) - Lebih detail sedikit
+const legGeo = new THREE.BoxGeometry(0.1, 0.8, 0.1);
 for (let i = 0; i < 4; i++) {
-  const finGroup = new THREE.Group()
-  const fin = new THREE.Mesh(finGeo, matRed)
-  fin.position.set(0.4, -0.1, 0)
-  fin.rotation.z = Math.PI / 6
-  fin.castShadow = true
-  finGroup.add(fin)
-  finGroup.rotation.y = (Math.PI / 2) * i
-  lander.add(finGroup)
+  const legGroup = new THREE.Group();
+  const leg = new THREE.Mesh(legGeo, matBody);
+  leg.position.set(0.4, -0.2, 0);
+  leg.rotation.z = Math.PI / 4;
+  leg.castShadow = true;
+  
+  const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.05, 8), matDark);
+  foot.position.set(0.65, -0.6, 0);
+  foot.rotation.z = -Math.PI / 4; // Luruskan foot
+  
+  legGroup.add(leg);
+  legGroup.add(foot);
+  legGroup.rotation.y = (Math.PI / 2) * i + (Math.PI/4); // Rotate 45 derajat biar silang
+  lander.add(legGroup);
 }
-scene.add(lander)
+scene.add(lander);
 
-// =====================
-// 6. FLAMES & PARTICLES
-// =====================
-function createFlame(color = 0xffaa00, h = 0.5, w = 0.15) {
-  const geo = new THREE.ConeGeometry(w, h, 16)
-  const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.8 })
-  return new THREE.Mesh(geo, mat)
+// --- PARTICLE SYSTEM UNTUK API ---
+const particleCount = 200;
+const particlesGeo = new THREE.BufferGeometry();
+const particlePositions = new Float32Array(particleCount * 3);
+const particleLifetimes = new Float32Array(particleCount); // Umur partikel
+const particleVelocities = []; // Array of Vector3
+
+// Inisialisasi partikel di tempat tersembunyi
+for(let i=0; i<particleCount; i++) {
+  particlePositions[i*3] = 0;     // x
+  particlePositions[i*3+1] = -500; // y (hidden)
+  particlePositions[i*3+2] = 0;     // z
+  particleLifetimes[i] = 0;
+  particleVelocities.push(new THREE.Vector3());
 }
 
-const flameMain = createFlame(0xffaa00, 1.2, 0.25)
-flameMain.position.set(0, -1.0, 0)
-flameMain.rotation.x = Math.PI
-flameMain.visible = false
-lander.add(flameMain)
+particlesGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+const particlesMat = new THREE.PointsMaterial({
+  color: 0xffaa00,
+  size: 0.3,
+  transparent: true,
+  opacity: 0.8,
+  blending: THREE.AdditiveBlending, // Efek cahaya bertumpuk
+  depthWrite: false
+});
+const particleSystem = new THREE.Points(particlesGeo, particlesMat);
+scene.add(particleSystem);
 
-const flameLeft = createFlame(0x00ffff, 0.4, 0.08)
-flameLeft.position.set(-0.35, 0.6, 0)
-flameLeft.rotation.z = Math.PI / 2
-flameLeft.visible = false
-lander.add(flameLeft)
+// Fungsi Spawn Partikel
+function spawnParticle(sourcePos, direction, spread, speed) {
+  for(let i=0; i<particleCount; i++) {
+    if(particleLifetimes[i] <= 0) { // Cari partikel mati
+      particleLifetimes[i] = 1.0; // Reset umur (1.0 = 100%)
+      
+      // Posisi awal (relatif terhadap world, diambil dari posisi nozzle roket)
+      particlePositions[i*3] = sourcePos.x;
+      particlePositions[i*3+1] = sourcePos.y;
+      particlePositions[i*3+2] = sourcePos.z;
 
-const flameRight = createFlame(0x00ffff, 0.4, 0.08)
-flameRight.position.set(0.35, 0.6, 0)
-flameRight.rotation.z = -Math.PI / 2
-flameRight.visible = false
-lander.add(flameRight)
+      // Velocity acak
+      const v = particleVelocities[i];
+      v.copy(direction).multiplyScalar(speed);
+      v.x += (Math.random() - 0.5) * spread;
+      v.y += (Math.random() - 0.5) * spread;
+      v.z += (Math.random() - 0.5) * spread;
+      
+      break; // Spawn satu per frame call cukup
+    }
+  }
+}
 
-// Cahaya Engine (Glow effect saat mesin nyala)
-const engineLight = new THREE.PointLight(0xffaa00, 0, 5)
-engineLight.position.set(0, -1, 0)
-lander.add(engineLight)
+function updateParticles() {
+  const positions = particleSystem.geometry.attributes.position.array;
+
+  for(let i=0; i<particleCount; i++) {
+    if(particleLifetimes[i] > 0) {
+      // Kurangi umur
+      particleLifetimes[i] -= 0.02; // Kecepatan hilangnya api
+
+      // Gerakkan partikel
+      positions[i*3] += particleVelocities[i].x;
+      positions[i*3+1] += particleVelocities[i].y;
+      positions[i*3+2] += particleVelocities[i].z;
+
+      // Reset jika mati
+      if(particleLifetimes[i] <= 0) {
+        positions[i*3+1] = -500; // Sembunyikan
+      }
+    }
+  }
+  particleSystem.geometry.attributes.position.needsUpdate = true;
+}
+
+// Light untuk engine glow
+const engineLight = new THREE.PointLight(0xff6600, 0, 8);
+engineLight.position.set(0, -0.5, 0);
+lander.add(engineLight);
+
 
 // =====================
 // 7. GAME LOGIC
 // =====================
-let episode = []
-let frameIndex = 0
-let playing = true
+let episode = [];
+let frameIndex = 0;
+let playing = true;
 
 fetch("episode.json")
   .then(res => res.json())
   .then(data => {
-    episode = data
+    episode = data;
+    createTrajectory(data); // Buat garis lintasan saat data dimuat
     if(document.getElementById("scrubber")) 
-      document.getElementById("scrubber").max = episode.length - 1
-    animate()
-  })
+      document.getElementById("scrubber").max = episode.length - 1;
+    animate();
+  });
 
 // UI Hooks
-const btn = document.getElementById("playPause")
-const scrub = document.getElementById("scrubber")
-if(btn) btn.onclick = () => { playing = !playing; btn.innerText = playing ? "Pause" : "Play" }
-if(scrub) scrub.oninput = () => { playing = false; btn.innerText = "Play"; frameIndex = Number(scrub.value); renderFrame(frameIndex) }
+const btn = document.getElementById("playPause");
+const scrub = document.getElementById("scrubber");
+if(btn) btn.onclick = () => { playing = !playing; btn.innerText = playing ? "Pause" : "Play" };
+if(scrub) scrub.oninput = () => { playing = false; btn.innerText = "Play"; frameIndex = Number(scrub.value); renderFrame(frameIndex); };
 
-function updateFlames(action) {
-  flameMain.visible = (action === 2)
-  flameLeft.visible = (action === 1)
-  flameRight.visible = (action === 3)
+function handleEngineEffects(action) {
+  const worldPos = new THREE.Vector3();
+  
+  // 1. Main Engine (Action 2)
+  if (action === 2) {
+    // Cari posisi nozzle di world space
+    engine.getWorldPosition(worldPos);
+    // Arah semburan (kebalikan dari arah atas roket)
+    const downVec = new THREE.Vector3(0, -1, 0).applyQuaternion(lander.quaternion);
+    
+    // Spawn banyak partikel biar tebal
+    spawnParticle(worldPos, downVec, 0.2, 0.15);
+    spawnParticle(worldPos, downVec, 0.1, 0.2);
 
-  // Efek flicker api + cahaya
-  if (flameMain.visible) {
-    flameMain.scale.set(1 + Math.random()*0.2, 1 + Math.random()*0.4, 1 + Math.random()*0.2)
-    engineLight.intensity = 2 + Math.random() // Cahaya kedip-kedip
+    engineLight.intensity = 3 + Math.random(); // Flicker light
+  } 
+  // 2. Side Engines (Action 1 & 3)
+  else if (action === 1 || action === 3) {
+    // Sederhanakan side thruster: spawn dari samping bodi
+    lander.getWorldPosition(worldPos);
+    // Geser sedikit ke kiri/kanan lokal
+    const offset = action === 1 ? -0.3 : 0.3;
+    const sideVec = new THREE.Vector3(offset, 0.5, 0).applyQuaternion(lander.quaternion);
+    worldPos.add(sideVec);
+    
+    const thrustDir = new THREE.Vector3(action === 1 ? 1 : -1, 0, 0).applyQuaternion(lander.quaternion);
+    spawnParticle(worldPos, thrustDir, 0.05, 0.1);
+    
+    engineLight.intensity = 0.5;
   } else {
-    engineLight.intensity = 0
+    engineLight.intensity = 0;
   }
 }
 
 function renderFrame(i) {
-  const f = episode[i]
-  if (!f) return
+  const f = episode[i];
+  if (!f) return;
   
+  // Update posisi roket
   if (f.state) {
-    lander.position.set(f.state.x, f.state.y, 0)
-    lander.rotation.z = f.state.angle
+    lander.position.set(f.state.x, f.state.y, 0);
+    lander.rotation.z = f.state.angle;
   } else {
-    lander.position.set(f.x, f.y, 0)
-    lander.rotation.z = f.angle
+    lander.position.set(f.x, f.y, 0);
+    lander.rotation.z = f.angle;
   }
-  updateFlames(f.action ?? 0)
+  
+  // Update efek visual
+  handleEngineEffects(f.action ?? 0);
 }
 
 function updateCamera(action) {
-  // Smooth Follow
-  camera.position.x += (lander.position.x - camera.position.x) * 0.08
+  // Smooth Follow dengan sedikit "lead" (melihat ke arah gerakan)
+  const targetX = lander.position.x;
+  const targetY = lander.position.y + 2; // Kamera agak di atas roket
   
-  // Dynamic Zoom & Height
-  // Kalau tinggi > 5, kamera mundur biar kelihatan luas
-  // Kalau dekat tanah, kamera mendekat
-  const targetZ = lander.position.y < 3 ? 6 : 12
-  const targetY = lander.position.y + 3
+  camera.position.x += (targetX - camera.position.x) * 0.05;
+  camera.position.y += (targetY - camera.position.y) * 0.05;
   
-  camera.position.z += (targetZ - camera.position.z) * 0.05
-  camera.position.y += (targetY - camera.position.y) * 0.05
-  
-  // Camera Shake (Getaran mesin)
+  // Zoom out jika roket tinggi
+  const targetZ = lander.position.y < 5 ? 12 : 20;
+  camera.position.z += (targetZ - camera.position.z) * 0.02;
+
+  // Sedikit goyang kamera jika mesin utama nyala (Screen Shake)
   if (action === 2) {
-    camera.position.x += (Math.random() - 0.5) * 0.05
-    camera.position.y += (Math.random() - 0.5) * 0.05
+    camera.position.x += (Math.random() - 0.5) * 0.02;
+    camera.position.y += (Math.random() - 0.5) * 0.02;
   }
   
-  camera.lookAt(lander.position.x, lander.position.y, 0)
+  camera.lookAt(lander.position.x, lander.position.y, 0);
 }
 
 function animate() {
-  requestAnimationFrame(animate)
+  requestAnimationFrame(animate);
 
   if (episode.length && playing) {
-    frameIndex++
-    if (frameIndex >= episode.length) frameIndex = episode.length - 1
-    if(scrub) scrub.value = frameIndex
+    frameIndex++;
+    if (frameIndex >= episode.length) frameIndex = episode.length - 1;
+    if(scrub) scrub.value = frameIndex;
   }
   
   if(episode.length) {
-    renderFrame(frameIndex)
-    updateCamera(episode[frameIndex]?.action ?? 0)
+    const currentAction = episode[frameIndex]?.action ?? 0;
+    renderFrame(frameIndex);
+    updateCamera(currentAction);
   }
 
-  renderer.render(scene, camera)
+  updateParticles();
+
+  // PENTING: Gunakan composer.render(), bukan renderer.render() untuk efek bloom
+  composer.render();
 }
 
 window.addEventListener("resize", () => {
-  camera.aspect = window.innerWidth / window.innerHeight
-  camera.updateProjectionMatrix()
-  renderer.setSize(window.innerWidth, window.innerHeight)
-})
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  composer.setSize(window.innerWidth, window.innerHeight); // Resize bloom composer
+});

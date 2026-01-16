@@ -12,36 +12,27 @@
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       }
 
-      /* =========================
-         UI CONTAINER (HUD)
-      ========================= */
+      /* UI CONTAINER */
       #ui-container {
         position: absolute;
         bottom: 30px;
         left: 50%;
         transform: translateX(-50%);
-        
         display: flex;
         align-items: center;
         gap: 15px;
-        
         padding: 12px 25px;
         border-radius: 30px;
-        
-        /* Efek Kaca (Glassmorphism) */
         background: rgba(20, 20, 35, 0.6);
         backdrop-filter: blur(8px);
         border: 1px solid rgba(255, 255, 255, 0.15);
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-        
-        z-index: 100; /* Pastikan di atas canvas 3D */
+        z-index: 100;
       }
 
-      /* =========================
-         BUTTON STYLE
-      ========================= */
+      /* BUTTON STYLE */
       #playPause {
-        background: #d62828; /* Merah Roket */
+        background: #d62828;
         color: white;
         border: none;
         padding: 8px 20px;
@@ -65,11 +56,9 @@
         transform: scale(0.95);
       }
 
-      /* =========================
-         SLIDER / SCRUBBER STYLE
-      ========================= */
+      /* SLIDER STYLE */
       #scrubber {
-        -webkit-appearance: none; /* Hapus style default browser */
+        -webkit-appearance: none;
         width: 300px;
         height: 6px;
         background: rgba(255, 255, 255, 0.2);
@@ -83,14 +72,13 @@
         background: rgba(255, 255, 255, 0.3);
       }
 
-      /* Bullet (Thumb) Slider untuk Chrome/Safari */
       #scrubber::-webkit-slider-thumb {
         -webkit-appearance: none;
         appearance: none;
         width: 18px;
         height: 18px;
         border-radius: 50%;
-        background: #4cc9f0; /* Biru Neon (sesuai jendela roket) */
+        background: #4cc9f0;
         border: 2px solid #fff;
         cursor: pointer;
         box-shadow: 0 0 10px rgba(76, 201, 240, 0.8);
@@ -100,18 +88,16 @@
       #scrubber::-webkit-slider-thumb:hover {
         transform: scale(1.2);
       }
-
-      /* Bullet (Thumb) Slider untuk Firefox */
-      #scrubber::-moz-range-thumb {
-        width: 18px;
-        height: 18px;
-        border-radius: 50%;
-        background: #4cc9f0;
-        border: 2px solid #fff;
-        cursor: pointer;
-        box-shadow: 0 0 10px rgba(76, 201, 240, 0.8);
-      }
     </style>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.160/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160/examples/jsm/"
+        }
+      }
+    </script>
   </head>
   <body>
     <div id="ui-container">
