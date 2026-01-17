@@ -20,7 +20,7 @@ This project implements a Deep Reinforcement Learning agent capable of autonomou
 
 ## 🎥 Demo
 
-## 🛠️ How to Run
+## 🛠️ How to Run 2D
 ```bash
 python -m venv rl-env
 ```
@@ -38,3 +38,6 @@ source rl-env/bin/activate
 pip install gymnasium[box2d] torch
 python dqn_lunarlander.py
 python eval_lunarlander.py
+```
+
+## 🛠️ How to Run 3D
