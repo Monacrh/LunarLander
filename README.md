@@ -41,3 +41,5 @@ python eval_lunarlander.py
 ```
 
 ## 🛠️ How to Run 3D
+```bash
+python -m http.server 8000
