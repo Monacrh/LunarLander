@@ -44,3 +44,5 @@ python eval_lunarlander.py
 ```bash
 cd frontend
 python -m http.server 8000
+```
+Open localhost:8000
