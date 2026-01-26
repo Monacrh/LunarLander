@@ -46,4 +46,5 @@ cd frontend
 python -m http.server 8000
 ```
 
+Open Browser
 Open localhost:8000
