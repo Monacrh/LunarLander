@@ -1,6 +1,6 @@
-# 🚀 Autonomous Lunar Lander (Double DQN)
+# 🚀 Autonomous Lunar Lander (DQN &Double DQN)
 
-This project implements a Deep Reinforcement Learning agent capable of autonomously landing a spacecraft in the LunarLander-v3 environment using Double Deep Q-Networks.
+This project implements a Deep Reinforcement Learning agent capable of autonomously landing a spacecraft in the LunarLander-v3 environment using Deep Q-Networks & Double Deep Q-Networks.
 
 ## 🧠 Key Concepts
 - Deep Q-Network (DQN)
